@@ -8,33 +8,6 @@
 
 using asio::local::datagram_protocol;
 
-void client_func() {
-
-  try {
-
-    asio::io_context io_context;
-
-    ::unlink("/tmp/unix_socket_1");
-    datagram_protocol::socket socket(io_context, datagram_protocol::endpoint("/tmp/unix_socket_1"));
-
-    datagram_protocol::endpoint ep("/tmp/unix_socket");
-    std::array<char, 1> send_buf  = {{ 0 }};
-    socket.send_to(asio::buffer(send_buf), ep);
-
-    std::array<char, 128> recv_buf;
-    datagram_protocol::endpoint sender_endpoint;
-    size_t len = socket.receive_from(
-        asio::buffer(recv_buf), sender_endpoint);
-
-    std::cout.write(recv_buf.data(), len);
-
-  } catch (std::exception& e) {
-
-    std::cerr << e.what() << std::endl;
-
-  }
-
-}
 std::string make_daytime_string()
 {
   using namespace std; // For time_t, time and ctime;
@@ -102,9 +75,7 @@ int main()
   {
     asio::io_context io_context;
     udp_server server(io_context);
-    std::thread thr(client_func);
     io_context.run();
-    thr.join();
   } catch (std::exception& e) {
     std::cerr << e.what() << std::endl;
   }
