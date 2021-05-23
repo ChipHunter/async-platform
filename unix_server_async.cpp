@@ -11,17 +11,18 @@ using asio::local::datagram_protocol;
 enum class msgType { TIME, NUMBER };
 
 struct msg {
-   msgType type;
-   int integer;
-   std::string str;
-
+  msgType type;
+  int integer;
+  std::string str;
 };
 
-std::string make_daytime_string()
-{
+std::string make_daytime_string() {
+
   using namespace std; // For time_t, time and ctime;
   time_t now = time(0);
+
   return ctime(&now);
+
 }
 
 
@@ -36,10 +37,16 @@ class UnixClient {
 
     }
 
-    void sendMsg(msg* m) {
+    void sendMsg(std::unique_ptr<msg> m) {
       char buf[sizeof(m)];
-      memcpy(buf, &m, sizeof(m));
-      mpSocket->send_to(asio::buffer(buf), mEndpoint);
+      msg* mm = m.release();
+      memcpy(buf, &mm, sizeof(m));
+      try {
+        mpSocket->send_to(asio::buffer(buf), mEndpoint);
+      } catch (std::exception& e) {
+        delete mm;
+        std::cerr << e.what() << std::endl;
+      }
     }
 
     // size_t recvMsg(std::array<char, 128>& recvBuf) {
@@ -48,7 +55,6 @@ class UnixClient {
     //   return mpSocket->receive_from(
     //       asio::buffer(recvBuf), sender_endpoint);
 
-    // }
 
   private:
     std::string mSocketAddr;
@@ -66,7 +72,7 @@ void clientFunc() {
     try {
 
       UnixClient client("/tmp/unix_client");
-      msg* m = new msg;
+      std::unique_ptr<msg> m = std::make_unique<msg>();
 
       if (cnt%2==0) {
         m->type = msgType::NUMBER;
@@ -75,7 +81,7 @@ void clientFunc() {
         m->type = msgType::TIME;
         m->str = make_daytime_string();
       }
-      client.sendMsg(m);
+      client.sendMsg(std::move(m));
 
     } catch (std::exception& e) {
 
@@ -88,7 +94,7 @@ void clientFunc() {
 
 }
 
-void func(msg* m) {
+void func(std::unique_ptr<msg> m) {
 
   if (m->type == msgType::TIME)
     std::cout << "the time is: " << m->str << std::endl;
@@ -100,7 +106,7 @@ void func(msg* m) {
 class UnixServer
 {
 public:
-  UnixServer(std::function<void(msg*)> func) : mFunc(func)
+  UnixServer(std::function<void(std::unique_ptr<msg>)> func) : mFunc(func)
   {
     ::unlink("/tmp/unix_socket");
     mpSocket = std::make_unique<datagram_protocol::socket>(mIOContext, datagram_protocol::endpoint("/tmp/unix_socket"));
@@ -128,8 +134,9 @@ private:
     {
       msg* m;
       memcpy(&m, recv_buffer_, sizeof(m));
-      mFunc(m);
-      delete m;
+      std::unique_ptr<msg> mm(m);
+      mFunc(std::move(mm));
+
 
       // mpSocket->async_send_to(asio::buffer(*message), remote_endpoint_,
       //     std::bind(&UnixServer::handle_send, this, message,
@@ -151,7 +158,7 @@ private:
     std::unique_ptr<datagram_protocol::socket> mpSocket;
     datagram_protocol::endpoint remote_endpoint_;
     char recv_buffer_[sizeof(msg)];
-    std::function<void(msg*)> mFunc;
+    std::function<void(std::unique_ptr<msg>)> mFunc;
     asio::io_context mIOContext;
 };
 
