@@ -8,11 +8,10 @@
 #include <asio.hpp>
 
 using asio::local::datagram_protocol;
-enum class msgType { TIME, NUMBER };
+enum class msgType { TIME_REQUEST, TIME_REPLY };
 
 struct msg {
   msgType type;
-  int integer;
   std::string str;
 };
 
@@ -26,90 +25,13 @@ std::string make_daytime_string() {
 }
 
 
-class UnixClient {
-  public:
-    UnixClient(std::string socketAddr) : mSocketAddr(socketAddr), mEndpoint("/tmp/unix_socket") {
-
-      asio::io_context io_context;
-
-      ::unlink(mSocketAddr.c_str());
-      mpSocket = std::make_unique<datagram_protocol::socket>(io_context, datagram_protocol::endpoint(mSocketAddr));
-
-    }
-
-    void sendMsg(std::unique_ptr<msg> m) {
-      char buf[sizeof(m)];
-      msg* mm = m.release();
-      memcpy(buf, &mm, sizeof(m));
-      try {
-        mpSocket->send_to(asio::buffer(buf), mEndpoint);
-      } catch (std::exception& e) {
-        delete mm;
-        std::cerr << e.what() << std::endl;
-      }
-    }
-
-    // size_t recvMsg(std::array<char, 128>& recvBuf) {
-
-    //   datagram_protocol::endpoint sender_endpoint;
-    //   return mpSocket->receive_from(
-    //       asio::buffer(recvBuf), sender_endpoint);
-
-
-  private:
-    std::string mSocketAddr;
-    datagram_protocol::endpoint mEndpoint;
-    std::unique_ptr<datagram_protocol::socket> mpSocket;
-
-};
-
-void clientFunc() {
-
-  int cnt = 0;
-  while(true) {
-    std::chrono::seconds sec(1);
-    std::this_thread::sleep_for(sec);
-    try {
-
-      UnixClient client("/tmp/unix_client");
-      std::unique_ptr<msg> m = std::make_unique<msg>();
-
-      if (cnt%2==0) {
-        m->type = msgType::NUMBER;
-        m->integer = cnt;
-      } else {
-        m->type = msgType::TIME;
-        m->str = make_daytime_string();
-      }
-      client.sendMsg(std::move(m));
-
-    } catch (std::exception& e) {
-
-      std::cerr << e.what() << std::endl;
-
-    }
-
-    cnt++;
-  }
-
-}
-
-void func(std::unique_ptr<msg> m) {
-
-  if (m->type == msgType::TIME)
-    std::cout << "the time is: " << m->str << std::endl;
-  if (m->type == msgType::NUMBER)
-    std::cout << "the number is: " << m->integer << std::endl;
-
-}
-
-class UnixServer
+class Unit2
 {
 public:
-  UnixServer(std::function<void(std::unique_ptr<msg>)> func) : mFunc(func)
+  Unit2()
   {
-    ::unlink("/tmp/unix_socket");
-    mpSocket = std::make_unique<datagram_protocol::socket>(mIOContext, datagram_protocol::endpoint("/tmp/unix_socket"));
+    ::unlink("/tmp/unix_socket2");
+    mpSocket = std::make_unique<datagram_protocol::socket>(mIOContext, datagram_protocol::endpoint("/tmp/unix_socket2"));
     start_receive();
   }
 
@@ -117,12 +39,25 @@ public:
     mIOContext.run();
   }
 
+  void sendMsg(std::unique_ptr<msg> m, datagram_protocol::endpoint address) {
+    char buf[sizeof(m)];
+    msg* mm = m.release();
+    memcpy(buf, &mm, sizeof(m));
+    try {
+      mpSocket->send_to(asio::buffer(buf), address);
+    } catch (std::exception& e) {
+      delete mm;
+      std::cerr << e.what() << std::endl;
+    }
+  }
+
+
 private:
   void start_receive()
   {
     mpSocket->async_receive_from(
-        asio::buffer(recv_buffer_), remote_endpoint_,
-        std::bind(&UnixServer::handle_receive, this,
+        asio::buffer(recv_buffer_), mServerAddress,
+        std::bind(&Unit2::handle_receive, this,
           std::placeholders::_1,
           std::placeholders::_2));
   }
@@ -135,30 +70,115 @@ private:
       msg* m;
       memcpy(&m, recv_buffer_, sizeof(m));
       std::unique_ptr<msg> mm(m);
-      mFunc(std::move(mm));
-
-
-      // mpSocket->async_send_to(asio::buffer(*message), remote_endpoint_,
-      //     std::bind(&UnixServer::handle_send, this, message,
-      //       std::placeholders::_1,
-      //       std::placeholders::_2));
+      if (mm->type == msgType::TIME_REQUEST) {
+        mm->type = msgType::TIME_REPLY;
+        mm->str = make_daytime_string();
+        sendMsg(std::move(mm), mServerAddress);
+      }
 
       start_receive();
     }
   }
 
-  void handle_send(std::shared_ptr<std::string> /*message*/,
-      const asio::error_code& /*error*/,
-      std::size_t /*bytes_transferred*/)
-  {
-  }
-
 
   private:
     std::unique_ptr<datagram_protocol::socket> mpSocket;
+    std::unique_ptr<asio::steady_timer> mpTimer;
+    datagram_protocol::endpoint mServerAddress;
+    char recv_buffer_[sizeof(msg)];
+    asio::io_context mIOContext;
+};
+
+void clientFunc() {
+
+  Unit2 server;
+  server.waitForData();
+
+}
+class Unit1
+{
+public:
+  Unit1()
+  {
+    ::unlink("/tmp/unix_socket1");
+    mpSocket = std::make_unique<datagram_protocol::socket>(mIOContext, datagram_protocol::endpoint("/tmp/unix_socket1"));
+    mpTimer = std::make_unique<asio::steady_timer>(mIOContext, asio::chrono::seconds(5));
+    start_receive();
+    start_timer();
+  }
+
+  void waitForData()  {
+    mIOContext.run();
+  }
+
+  void sendMsg(std::unique_ptr<msg> m, datagram_protocol::endpoint address) {
+    char buf[sizeof(m)];
+    msg* mm = m.release();
+    memcpy(buf, &mm, sizeof(m));
+    try {
+      mpSocket->send_to(asio::buffer(buf), address);
+    } catch (std::exception& e) {
+      delete mm;
+      std::cerr << e.what() << std::endl;
+    }
+  }
+
+
+private:
+  void handle_timer(const asio::error_code& /*e*/)
+  {
+    std::cout << "sending request!" << std::endl;
+    try {
+
+      std::unique_ptr<msg> m = std::make_unique<msg>();
+
+      m->type = msgType::TIME_REQUEST;
+      sendMsg(std::move(m), mServerAddress);
+
+    } catch (std::exception& e) {
+
+      std::cerr << e.what() << std::endl;
+
+    }
+    start_timer();
+  }
+
+  void start_receive()
+  {
+    mpSocket->async_receive_from(
+        asio::buffer(recv_buffer_), remote_endpoint_,
+        std::bind(&Unit1::handle_receive, this,
+          std::placeholders::_1,
+          std::placeholders::_2));
+  }
+
+  void start_timer()
+  {
+    mpTimer->expires_at(mpTimer->expiry() + asio::chrono::seconds(5));
+    mpTimer->async_wait(std::bind(&Unit1::handle_timer, this, std::placeholders::_1));
+  }
+
+  void handle_receive(const asio::error_code& error,
+      std::size_t /*bytes_transferred*/)
+  {
+    if (!error)
+    {
+      msg* m;
+      memcpy(&m, recv_buffer_, sizeof(m));
+      std::unique_ptr<msg> mm(m);
+      if(mm->type == msgType::TIME_REPLY)
+        std::cout << "time is: " << mm->str << std::endl;
+
+      start_receive();
+    }
+  }
+
+  private:
+    std::unique_ptr<datagram_protocol::socket> mpSocket;
+    std::unique_ptr<asio::steady_timer> mpTimer;
+    datagram_protocol::endpoint mServerAddress = datagram_protocol::endpoint("/tmp/unix_socket2");
     datagram_protocol::endpoint remote_endpoint_;
     char recv_buffer_[sizeof(msg)];
-    std::function<void(std::unique_ptr<msg>)> mFunc;
     asio::io_context mIOContext;
 };
 
@@ -167,7 +187,7 @@ int main()
   try
   {
 
-    UnixServer server(func);
+    Unit1 server;
     std::thread t1(clientFunc);
 
     server.waitForData();
