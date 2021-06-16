@@ -1,5 +1,4 @@
 cmake_minimum_required(VERSION 3.2)
-
 project(async_platform_lib)
 
 set(CMAKE_CXX_STANDARD 14)
@@ -7,16 +6,14 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -O3")
 
 set(CMAKE_INSTALL_PREFIX ${PROJECT_SOURCE_DIR})
 
-set(DIVISIBLE_INSTALL_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include)
-set(DIVISIBLE_INSTALL_BIN_DIR ${PROJECT_SOURCE_DIR}/bin)
-set(DIVISIBLE_INSTALL_LIB_DIR ${PROJECT_SOURCE_DIR}/lib)
+set(INCLUDE_DIR ${PROJECT_SOURCE_DIR}/include)
+set(INCLUDE_JUST_FOR_NOW ${PROJECT_SOURCE_DIR}/src)
 
-set(DIVISION_HEADERS_DIR ${PROJECT_SOURCE_DIR}/src/plat)
-
-include_directories(${DIVISIBLE_INSTALL_INCLUDE_DIR})
-include_directories(${DIVISION_HEADERS_DIR})
+include_directories(${INCLUDE_DIR})
+include_directories(${INCLUDE_JUST_FOR_NOW})
 
 add_subdirectory(src)
+add_subdirectory(app)
 #add_subdirectory(test)
 
 

@@ -1,9 +1,13 @@
-cmake_minimum_required(VERSION 3.2)
-project(divider)
+set(SOURCE_FILES
+    asio_timer.h
+    asio_timer.cpp
+    asio_unix_socket.h
+    asio_unix_socket.cpp
+    async_platform.cpp
+    async_platform.h
+)
 
-add_subdirectory(plat)
-set(SOURCE_FILES main.cpp)
+add_library(async_plat SHARED STATIC ${SOURCE_FILES})
 
-add_executable(divider ${SOURCE_FILES})
-target_link_libraries(divider async_plat)
-install(TARGETS divider DESTINATION ${DIVISIBLE_INSTALL_BIN_DIR})
+find_package(Threads REQUIRED)
+target_link_libraries(async_plat PRIVATE Threads::Threads) 
