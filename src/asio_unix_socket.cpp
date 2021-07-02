@@ -2,8 +2,9 @@
 
 namespace async_platform {
 
-AsioUnixSocket::AsioUnixSocket(boost::asio::io_context& io, std::string name, std::shared_ptr<msg> m) : 
-                                                      mSocketName(name) , mSocketMsg(m) {
+AsioUnixSocket::AsioUnixSocket(boost::asio::io_context& io, std::string name, 
+                                  std::shared_ptr<msg> m) : 
+                                  mSocketName(name) , mSocketMsg(m) {
   ::unlink(mSocketName.c_str());
   mpSocket = std::make_unique<boost::asio::local::datagram_protocol::socket>(io, 
                           boost::asio::local::datagram_protocol::endpoint(mSocketName));
@@ -36,6 +37,18 @@ void AsioUnixSocket::handle_receive(const boost::system::error_code& error,
     }
 
     start_receive();
+  }
+}
+
+void AsioUnixSocket::sendMsg(std::unique_ptr<msg> m, boost::asio::local::datagram_protocol::endpoint address) {
+  char buf[sizeof(m)];
+  msg* mm = m.release();
+  memcpy(buf, &mm, sizeof(m));
+  try {
+    mpSocket->send_to(boost::asio::buffer(buf), address);
+  } catch (std::exception& e) {
+    delete mm;
+    std::cerr << e.what() << std::endl;
   }
 }
 

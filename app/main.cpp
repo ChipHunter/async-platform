@@ -5,7 +5,7 @@
 #include <boost/asio.hpp>
 #include <boost/bind/bind.hpp>
 #include <thread>
-//#include "test_timer.cpp" 
+
 #include "async_types.h"
 #include "async_platform.h"
 
@@ -98,43 +98,31 @@ private:
 };
 
 
-void func() {
-
+void func1() {
     Unit1 server;
     server.waitForData();
 }
+
 int main() {
-  
 
   std::shared_ptr<msg> m = std::make_shared<msg>();
-  async_platform::AsyncPlatform plat(m);
-  plat.waitForEvents();
+  async_platform::AsyncPlatform plat("main", m);
+  std::thread t1(func1);
+
+  while (true) {
+    plat.waitForEvents();
+    if (m->event == eventName::TIMER)
+      std::cout << "timer is: " << m->name<< std::endl;
+    else if (m->event == eventName::UNIX_SOCKET)
+      std::cout << "event is socket: " << m->name << std::endl;
+    else if (m->event == eventName::NONE)
+      continue;
+    else
+      std::cout << "what the heck is this??" << std::endl;
+    m->event = eventName::NONE;
+  }
   
-  if (m->event == eventName::TIMER)
-    std::cout << "timer is: " << m->name<< std::endl;
   
-  
-  // boost::asio::io_context io;
-
-
-  // std::shared_ptr<msg> m = std::make_shared<msg>();
-  // auto duration = std::chrono::milliseconds(1000);
-
-  // AsioTimer timer(io, "asio_timer", duration,  m);
-  // AsioUnixSocket socket(io, "/tmp/asio_unix_socket", m);
-
-  // std::thread t1(func);
-
-  // while (io.run_one()) {
-
-  //   if (m->event == eventName::TIMER)
-  //     std::cout << "timer is: " << m->name<< std::endl;
-  //   else if (m->event == eventName::UNIX_SOCKET)
-  //     std::cout << "event is socket: " << m->name << std::endl;
-  //   else
-  //     std::cout << "unknown event" << std::endl;
-  // }
-
   return 0;
 
 }
