@@ -25,7 +25,9 @@ private:
 private:
   void timerHandler(const boost::system::error_code& /*e*/, 
                     std::shared_ptr<boost::asio::steady_timer> t, 
-                    std::shared_ptr<msg> m, std::string timerName); 
+                    std::shared_ptr<msg> m, 
+                    std::string timerName, 
+                    std::chrono::milliseconds duration); 
 };
 }
 

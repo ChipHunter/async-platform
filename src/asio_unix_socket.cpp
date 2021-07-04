@@ -26,21 +26,18 @@ void AsioUnixSocket::handle_receive(const boost::system::error_code& error,
 {
   if (!error)
   {
-    std::cout << "handle receive!" << std::endl;
     msg* m;
     memcpy(&m, recv_buffer_, sizeof(m));
     std::unique_ptr<msg> mmm(m);
-    if (mmm->type == msgType::TIME_REQUEST) {
-      std::cout << "inside" << std::endl;
-      mm->event = eventName::UNIX_SOCKET;
-      mm->name = name;
-    }
+      mm->type = eventType::UNIX_SOCKET;
+      mm->eventName = name;
 
     start_receive();
   }
 }
 
-void AsioUnixSocket::sendMsg(std::unique_ptr<msg> m, boost::asio::local::datagram_protocol::endpoint address) {
+void AsioUnixSocket::sendMsg(std::unique_ptr<msg> m, std::string unitName) {
+  boost::asio::local::datagram_protocol::endpoint address("/tmp/unix_socket_" + unitName);
   char buf[sizeof(m)];
   msg* mm = m.release();
   memcpy(buf, &mm, sizeof(m));

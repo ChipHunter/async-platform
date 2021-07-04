@@ -2,16 +2,18 @@
 #define ASYNC_PLATFORM_TYPES_H
 
 #include<string>
+#include<chrono>
 
-enum class eventName {NONE, TIMER, UNIX_SOCKET, MQTT};
-enum class msgType { TIME_REQUEST, TIME_REPLY };
-enum class mqttTypes { CONNACK , CONTENT };
+enum class eventType {NONE, TIMER, UNIX_SOCKET};
 
 struct msg {
-  eventName event;
-  std::string name;
-  msgType type;
-  mqttTypes mqttType;
+  eventType type;
+  std::string eventName;
+};
+
+struct timerData {
+  std::string timerName;
+  std::chrono::milliseconds duration;
 };
 
 #endif

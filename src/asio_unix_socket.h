@@ -14,7 +14,7 @@ namespace async_platform {
 class AsioUnixSocket {
 public:
   AsioUnixSocket(boost::asio::io_context& io, std::string name, std::shared_ptr<msg> m); 
-  void sendMsg(std::unique_ptr<msg> m, boost::asio::local::datagram_protocol::endpoint address);
+  void sendMsg(std::unique_ptr<msg> m, std::string unitName);
 
 private:
   std::unique_ptr<boost::asio::local::datagram_protocol::socket> mpSocket;

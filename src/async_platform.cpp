@@ -2,9 +2,14 @@
 
 namespace async_platform {
 
-AsyncPlatform::AsyncPlatform(std::string unitName, std::shared_ptr<msg> m)  : mUnitName(unitName) { 
-  auto duration = std::chrono::milliseconds(1000);
-  mTimer = std::make_unique<AsioTimer>(mIoContext, "timer_the_timer", duration, m); 
+AsyncPlatform::AsyncPlatform(std::string unitName, std::shared_ptr<msg> m, std::vector<timerData>& timerDataVect)  : mUnitName(unitName) { 
+
+  for (auto i : timerDataVect) {
+
+    auto timer = std::make_unique<AsioTimer>(mIoContext, i.timerName, i.duration, m); 
+    mAsioTimersVect.push_back(std::move(timer));
+
+  }
   mSocket = std::make_unique<AsioUnixSocket>(mIoContext, "/tmp/asio_unix_socket", m); 
 }
 

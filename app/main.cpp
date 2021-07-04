@@ -47,7 +47,7 @@ private:
 
       std::unique_ptr<msg> m = std::make_unique<msg>();
 
-      m->type = msgType::TIME_REQUEST;
+      // m->type = msgType::TIME_REQUEST;
       sendMsg(std::move(m), datagram_protocol::endpoint("/tmp/asio_unix_socket"));
 
     } catch (std::exception& e) {
@@ -99,27 +99,52 @@ private:
 
 
 void func1() {
-    Unit1 server;
-    server.waitForData();
+  // std::shared_ptr<msg> m = std::make_shared<msg>();
+  // async_platform::AsyncPlatform plat("unit2", m);
+
+  // while (true) {
+  //   plat.waitForEvents();
+  //   if (m->event == eventName::TIMER)
+  //     std::cout << "timer is: " << m->name<< std::endl;
+  //   else if (m->event == eventName::UNIX_SOCKET)
+  //     std::cout << "event is socket: " << m->name << std::endl;
+  //   else if (m->event == eventName::NONE)
+  //     continue;
+  //   else
+  //     std::cout << "what the heck is this??" << std::endl;
+  //   m->event = eventName::NONE;
+  // }
 }
 
 int main() {
 
   std::shared_ptr<msg> m = std::make_shared<msg>();
-  async_platform::AsyncPlatform plat("main", m);
-  std::thread t1(func1);
+  std::vector<timerData> timerDataVect;
+  auto duration = std::chrono::milliseconds(1000);
+  auto duration1 = std::chrono::milliseconds(2000);
+  timerData dd;
+  dd.duration = duration;
+  dd.timerName = "timer1uu";
+  timerData ddd;
+  ddd.duration = duration1;
+  ddd.timerName = "daff";
+  timerDataVect.push_back(dd);
+  timerDataVect.push_back(ddd);
+  
+  async_platform::AsyncPlatform plat("unit1", m, timerDataVect);
+  //std::thread t1(func1);
 
   while (true) {
     plat.waitForEvents();
-    if (m->event == eventName::TIMER)
-      std::cout << "timer is: " << m->name<< std::endl;
-    else if (m->event == eventName::UNIX_SOCKET)
-      std::cout << "event is socket: " << m->name << std::endl;
-    else if (m->event == eventName::NONE)
+    if (m->type == eventType::TIMER)
+      std::cout << "timer is: " << m->eventName<< std::endl;
+    else if (m->type == eventType::UNIX_SOCKET)
+      std::cout << "event is socket: " << m->eventName << std::endl;
+    else if (m->type == eventType::NONE)
       continue;
     else
       std::cout << "what the heck is this??" << std::endl;
-    m->event = eventName::NONE;
+    m->type = eventType::NONE;
   }
   
   
