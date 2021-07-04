@@ -21,6 +21,7 @@ private:
   std::shared_ptr<boost::asio::steady_timer> mTimer;
   std::shared_ptr<msg> mTimerMsg;
   std::string mTimerName;
+  std::chrono::milliseconds mTimerDuration;
 
 private:
   void timerHandler(const boost::system::error_code& /*e*/, 
