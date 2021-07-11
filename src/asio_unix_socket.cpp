@@ -2,17 +2,19 @@
 
 namespace async_platform {
 
-AsioUnixSocket::AsioUnixSocket(boost::asio::io_context& io, std::string name, 
+AsioUnixSocket::AsioUnixSocket(boost::asio::io_context& io, 
+                                  std::string name, 
                                   std::shared_ptr<msg> m) : 
-                                  mSocketName(name) , mSocketMsg(m) {
-  ::unlink(mSocketName.c_str());
+                                  mSocketName(name), 
+                                  mSocketPath("/tmp/unix_socket_" + mSocketName), 
+                                  mSocketMsg(m) {
+  ::unlink(mSocketPath.c_str());
   mpSocket = std::make_unique<boost::asio::local::datagram_protocol::socket>(io, 
-                          boost::asio::local::datagram_protocol::endpoint(mSocketName));
+                          boost::asio::local::datagram_protocol::endpoint(mSocketPath));
   start_receive();
 }
 
-void AsioUnixSocket::start_receive()
-{
+void AsioUnixSocket::start_receive() {
   mpSocket->async_receive_from(
       boost::asio::buffer(recv_buffer_), mServerAddress,
       std::bind(&AsioUnixSocket::handle_receive, this,
@@ -24,23 +26,23 @@ void AsioUnixSocket::start_receive()
 void AsioUnixSocket::handle_receive(const boost::system::error_code& error,
     std::size_t, std::shared_ptr<msg> mm, std::string name)
 {
-  if (!error)
-  {
-    msg* m;
+  if (!error) {
+    socketData* m;
     memcpy(&m, recv_buffer_, sizeof(m));
-    std::unique_ptr<msg> mmm(m);
-      mm->type = eventType::UNIX_SOCKET;
-      mm->eventName = name;
+
+    mm->type = eventType::UNIX_SOCKET;
+    mm->eventName = name;
+    mSocketData.reset(m);
 
     start_receive();
   }
 }
 
-void AsioUnixSocket::sendMsg(std::unique_ptr<msg> m, std::string unitName) {
+void AsioUnixSocket::sendMsg(std::unique_ptr<socketData> d, std::string unitName) {
   boost::asio::local::datagram_protocol::endpoint address("/tmp/unix_socket_" + unitName);
-  char buf[sizeof(m)];
-  msg* mm = m.release();
-  memcpy(buf, &mm, sizeof(m));
+  char buf[sizeof(d)];
+  socketData* mm = d.release();
+  memcpy(buf, &mm, sizeof(d));
   try {
     mpSocket->send_to(boost::asio::buffer(buf), address);
   } catch (std::exception& e) {

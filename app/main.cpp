@@ -99,45 +99,58 @@ private:
 
 
 void func1() {
-  // std::shared_ptr<msg> m = std::make_shared<msg>();
-  // async_platform::AsyncPlatform plat("unit2", m);
+  std::shared_ptr<msg> m = std::make_shared<msg>();
+  std::vector<timerData> timerDataVect;
+  async_platform::AsyncPlatform plat("unit2", m, timerDataVect);
 
-  // while (true) {
-  //   plat.waitForEvents();
-  //   if (m->event == eventName::TIMER)
-  //     std::cout << "timer is: " << m->name<< std::endl;
-  //   else if (m->event == eventName::UNIX_SOCKET)
-  //     std::cout << "event is socket: " << m->name << std::endl;
-  //   else if (m->event == eventName::NONE)
-  //     continue;
-  //   else
-  //     std::cout << "what the heck is this??" << std::endl;
-  //   m->event = eventName::NONE;
-  // }
+   while (true) {
+     std::cout << "thread: waiting! " << m->eventName << std::endl;
+     plat.waitForEvents();
+     if (m->type == eventType::TIMER)
+       std::cout << "thread: timer is: " << m->eventName << std::endl;
+     else if (m->type == eventType::UNIX_SOCKET) {
+      std::cout << "thread: event is socket: " << m->eventName << std::endl;
+      std::cout << "thread: data: " << plat.getSocketData()->data << std::endl;
+     } else if (m->type == eventType::NONE) {
+      
+      std::cout << "none" << std::endl;
+      continue;
+     }
+    else
+      std::cout << "thread: what the heck is this??" << std::endl;
+    
+    m->type = eventType::NONE;
+  }
 }
 
 int main() {
 
   std::shared_ptr<msg> m = std::make_shared<msg>();
   std::vector<timerData> timerDataVect;
-  auto duration = std::chrono::milliseconds(1000);
+  // auto duration = std::chrono::milliseconds(1000);
   auto duration1 = std::chrono::milliseconds(2000);
-  timerData dd;
-  dd.duration = duration;
-  dd.timerName = "timer1uu";
+  // timerData dd;
+  // dd.duration = duration;
+  // dd.timerName = "timer1uu";
   timerData ddd;
   ddd.duration = duration1;
   ddd.timerName = "daff";
-  timerDataVect.push_back(dd);
+  // timerDataVect.push_back(dd);
   timerDataVect.push_back(ddd);
   
   async_platform::AsyncPlatform plat("unit1", m, timerDataVect);
-  //std::thread t1(func1);
+  std::thread t1(func1);
 
   while (true) {
     plat.waitForEvents();
-    if (m->type == eventType::TIMER)
+    if (m->type == eventType::TIMER) {
       std::cout << "timer is: " << m->eventName<< std::endl;
+      if (m->eventName == "daff") {
+        auto mm = std::make_unique<socketData>();
+        mm->data = 333;
+        plat.sendMsg(std::move(mm), "unit2");
+      }
+    }
     else if (m->type == eventType::UNIX_SOCKET)
       std::cout << "event is socket: " << m->eventName << std::endl;
     else if (m->type == eventType::NONE)

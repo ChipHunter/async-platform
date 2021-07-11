@@ -6,6 +6,10 @@
 
 enum class eventType {NONE, TIMER, UNIX_SOCKET};
 
+struct socketData {
+  int data;
+};
+
 struct msg {
   eventType type;
   std::string eventName;
