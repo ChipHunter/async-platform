@@ -14,7 +14,7 @@ namespace async_platform {
 
 class AsyncPlatform {
 public:
-  AsyncPlatform(std::string unitName, std::shared_ptr<msg> m, std::vector<timerData>& timerDataVect);
+  AsyncPlatform(std::string unitName, std::vector<timerData>& timerDataVect);
   int waitForEvents();
   void sendMsg(std::unique_ptr<socketData> d, std::string unitName) {
     mSocket->sendMsg(std::move(d), unitName);
@@ -24,11 +24,19 @@ public:
     return mSocket->getSocketData();
   }
 
+  msg getEventData() {
+    msg m;
+    m.eventName = mEventData->eventName;
+    m.type = mEventData->type;
+    return m;
+  }
+
 private:
   std::unique_ptr<AsioUnixSocket> mSocket;
   boost::asio::io_context mIoContext;
   std::string mUnitName;
   std::vector<std::unique_ptr<AsioTimer>> mAsioTimersVect;
+  std::shared_ptr<msg> mEventData;
 
 };
 
