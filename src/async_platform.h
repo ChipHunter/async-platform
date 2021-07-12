@@ -20,15 +20,12 @@ public:
     mSocket->sendMsg(std::move(d), unitName);
   }
 
-  std::shared_ptr<socketData> getSocketData() {
-    return mSocket->getSocketData();
+  socketData getSocketData() {
+    return *(mSocket->getSocketData());
   }
 
   msg getEventData() {
-    msg m;
-    m.eventName = mEventData->eventName;
-    m.type = mEventData->type;
-    return m;
+    return *(mEventData);
   }
 
 private:

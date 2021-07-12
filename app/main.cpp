@@ -21,7 +21,7 @@ void func1() {
        std::cout << "thread: timer is: " << m.eventName << std::endl;
      else if (m.type == eventType::UNIX_SOCKET) {
       std::cout << "thread: event is socket: " << m.eventName << std::endl;
-      std::cout << "thread: data: " << plat.getSocketData()->data << std::endl;
+      std::cout << "thread: data: " << plat.getSocketData().data << std::endl;
      } else if (m.type == eventType::NONE) {
       
       std::cout << "none" << std::endl;
