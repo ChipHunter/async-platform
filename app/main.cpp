@@ -12,7 +12,7 @@
 void func1() {
   std::shared_ptr<msg> m = std::make_shared<msg>();
   std::vector<timerData> timerDataVect;
-  async_platform::AsyncPlatform plat("unit2", timerDataVect);
+  async_platform::AsyncPlatform<socketData> plat("unit2", timerDataVect);
 
    while (true) {
      plat.waitForEvents();
@@ -48,7 +48,7 @@ int main() {
   // timerDataVect.push_back(dd);
   timerDataVect.push_back(ddd);
   
-  async_platform::AsyncPlatform plat("unit1", timerDataVect);
+  async_platform::AsyncPlatform<socketData> plat("unit1", timerDataVect);
   std::thread t1(func1);
 
   while (true) {
